@@ -30,27 +30,40 @@ import org.photonvision.vision.opencv.CVMat;
 import org.photonvision.vision.opencv.ImageRotationMode;
 import org.photonvision.vision.pipe.impl.HSVPipe.HSVParams;
 
-import jni.Gstreamer;
+import jni.Gstreamer; // TODO (charlie) refactor?
+
+class releaseCapThread extends Thread {
+  private long cap;
+
+  public releaseCapThread(long cap) {
+    this.cap = cap;
+  }
+
+  public void run() {
+    Gstreamer.releaseCam(cap);
+    System.out.println("Succesfully shutdown camera\n");
+  }
+}
 
 public class GstreamerFrameProvider extends FrameProvider {
   private final GstreamerSettables settables;
   static final Logger logger = new Logger(GstreamerFrameProvider.class, LogGroup.Camera);
-  private Gstreamer gstreamer;
   private long cap;
   private Mat frame;
 
-  public GstreamerFrameProvider(GstreamerSettables visionSettables) {
+  public GstreamerFrameProvider(GstreamerSettables visionSettables, String pipeline) {
     this.settables = visionSettables;
+
+    System.out.println(this.settables.getConfiguration().uniqueName);
 
     var vidMode = settables.getCurrentVideoMode();
     settables.setVideoMode(vidMode);
-    gstreamer = new Gstreamer();
-    String pipeline = "nvarguscamerasrc sensor-id=0 aelock=true ! " +
-        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=60/1, format=NV12 ! " +
-        "nvvidconv ! videoconvert ! appsink";
 
-    cap = gstreamer.initCam(pipeline);
+    Runtime current = Runtime.getRuntime();
+    cap = Gstreamer.initCam(pipeline);
+    current.addShutdownHook(new releaseCapThread(cap));
     frame = new Mat();
+    onCameraConnected();
   }
 
   @Override
@@ -63,16 +76,19 @@ public class GstreamerFrameProvider extends FrameProvider {
   @Override
   public Frame get() {
     ++sequenceID;
+    var start = MathUtils.wpiNanoTime();
 
-    gstreamer.readMat(cap, frame.nativeObj);
+    Gstreamer.readMat(cap, frame.nativeObj);
     CVMat mat = new CVMat(frame);
+
+    var end = MathUtils.wpiNanoTime();
 
     return new Frame(
         sequenceID,
         mat,
         mat,
         FrameThresholdType.HSV,
-        MathUtils.wpiNanoTime(),
+        end - start,
         settables.getFrameStaticProperties());
   }
 
@@ -94,7 +110,7 @@ public class GstreamerFrameProvider extends FrameProvider {
 
   @Override
   public void release() {
-    gstreamer.releaseCam(cap);
+    Gstreamer.releaseCam(cap);
   }
 
   @Override

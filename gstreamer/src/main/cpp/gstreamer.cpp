@@ -21,7 +21,7 @@ std::string jstringToCppString(JNIEnv *env, jstring jStr) {
     return ret;
 }
 
-JNIEXPORT jlong JNICALL Java_jni_Gstreamer_initCam(JNIEnv *env, jobject thisObject, jstring jpipe)
+JNIEXPORT jlong JNICALL Java_jni_Gstreamer_initCam(JNIEnv *env, jclass clazz, jstring jpipe)
 {
 
   std::string pipe(jstringToCppString(env, jpipe));
@@ -30,14 +30,14 @@ JNIEXPORT jlong JNICALL Java_jni_Gstreamer_initCam(JNIEnv *env, jobject thisObje
   return (jlong)cap;
 }
 
-JNIEXPORT void JNICALL Java_jni_Gstreamer_readMat(JNIEnv *env, jobject thisObject, jlong pcap, jlong pmat)
+JNIEXPORT void JNICALL Java_jni_Gstreamer_readMat(JNIEnv *env, jclass clazz, jlong pcap, jlong pmat)
 {
   cv::VideoCapture* cap = reinterpret_cast<cv::VideoCapture*>(pcap);
   cv::Mat* mat =  reinterpret_cast<cv::Mat*>(pmat);
   cap->read(*mat);
 }
 
-JNIEXPORT void JNICALL Java_jni_Gstreamer_releaseCam(JNIEnv *env, jobject thisObject, jlong pcap)
+JNIEXPORT void JNICALL Java_jni_Gstreamer_releaseCam(JNIEnv *env, jclass clazz, jlong pcap)
 {
   cv::VideoCapture* cap =  reinterpret_cast<cv::VideoCapture*>(pcap);
   cap->release();
