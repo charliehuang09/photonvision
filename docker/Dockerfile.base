@@ -1,0 +1,55 @@
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS builder
+
+WORKDIR /
+RUN apt-get update
+RUN apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev python3.10-dev python3-numpy
+RUN apt-get install -y libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libv4l-dev v4l-utils qv4l2
+RUN apt-get install -y curl unzip
+
+RUN mkdir opencv
+
+WORKDIR /opencv
+RUN curl -L https://github.com/opencv/opencv/archive/4.10.0.zip -o opencv-4.10.0.zip
+RUN curl -L https://github.com/opencv/opencv_contrib/archive/4.10.0.zip -o opencv_contrib-4.10.0.zip
+RUN unzip opencv-4.10.0.zip
+RUN unzip opencv_contrib-4.10.0.zip
+RUN rm *.zip
+RUN mkdir opencv-4.10.0/release
+WORKDIR /opencv/opencv-4.10.0/release
+RUN cmake -D WITH_CUDA=ON -D WITH_CUDNN=ON -D CUDA_ARCH_BIN="8.7" -D CUDA_ARCH_PTX="" -D OPENCV_GENERATE_PKGCONFIG=ON -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-4.10.0/modules -D WITH_GSTREAMER=ON -D WITH_LIBV4L=ON -D BUILD_opencv_python3=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+RUN make -j$(nproc)
+
+WORKDIR /
+RUN mkdir GpuDetectorJNI
+
+ENV PATH="${PATH}:/usr/local/cuda/bin"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/cuda/lib64"
+ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-arm64/"
+RUN apt-get install -y openjdk-17-jdk
+RUN apt-get install -y ninja-build
+RUN apt-get install -y protobuf-compiler
+RUN apt-get install -y libxrandr-dev
+RUN apt-get install -y libssh-dev
+RUN apt-get install -y libopencv4.5-java
+
+WORKDIR /GpuDetectorJNI
+RUN git clone https://github.com/wpilibsuite/allwpilib.git
+
+RUN git clone https://github.com/FRC-Team-4143/GpuDetectorJNI.git
+RUN mkdir GpuDetectorJNI/third_party/apriltag/build
+RUN mkdir GpuDetectorJNI/build
+
+WORKDIR /GpuDetectorJNI/allwpilib
+RUN cmake --preset default -DWITH_GUI=OFF -DWITH_JAVA=ON -DWITH_SIMULATION_MODULES=OFF -DWITH_TESTS=OFF -DOPENCV_JAR_FILE=/usr/share/java/opencv.jar
+WORKDIR /GpuDetectorJNI/allwpilib/build-cmake
+RUN cmake --build . --parallel $(nproc)
+RUN cmake --build . --target install
+
+WORKDIR /GpuDetectorJNI/GpuDetectorJNI/third_party/apriltag/build
+RUN cmake ..
+RUN make -j$(nproc)
+WORKDIR /GpuDetectorJNI/GpuDetectorJNI/build
+RUN cmake ..
+RUN make -j$(nproc)
+RUN cp lib971apriltag.so /usr/lib

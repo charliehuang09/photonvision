@@ -1,0 +1,11 @@
+FROM charliehuang09095/photonvision_dependancies AS builder
+
+RUN apt-get install build-essential software-properties-common -y
+ENV GRADLE_USER_HOME=/photonvision/.gradle
+
+WORKDIR /photonvision 
+COPY . . 
+RUN ./gradlew shadowJar --no-daemon
+
+FROM scratch AS output
+COPY --from=builder /photonvision .
