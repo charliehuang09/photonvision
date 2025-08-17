@@ -1,8 +1,5 @@
 FROM charliehuang09095/photonvision_dependancies AS builder
 
-WORKDIR /
-COPY photonvision photonvision
 WORKDIR /photonvision
-RUN rm -r .gradle
-RUN find -name "*.jar"
+COPY . . 
 CMD ["java", "-jar", "./photon-server/build/libs/photonvision-dev-Unknown-linuxarm64.jar"]
