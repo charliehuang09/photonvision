@@ -1,1 +1,2 @@
-docker run --rm -it -v ~/tmp/photonvision:/photonvision charliehuang09095/photonvision_build:1.0 ./gradlew shadowJar --no-daemon
+chmod -R +x .gradle
+docker run --rm -it --privileged=true -v /Users/charlie/Documents/photonvision:/photonvision:Z photonvision_build:1.0 ./gradlew shadowJar

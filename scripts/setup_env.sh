@@ -1,1 +1,1 @@
-docker build --rm --platform=linux/arm64 -f docker/Dockerfile.build -t charliehuang09095/photonvision_build:1.0 .
+docker build --platform=linux/arm64 -f docker/Dockerfile.build -t photonvision_build:1.0 .
